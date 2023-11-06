@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Interfaces\CommentI;
+use App\Models\Channel;
 use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -12,22 +13,41 @@ use Illuminate\Support\Facades\Storage;
 class CommentRepository implements CommentI
 {
 
-    public function getComments(string $id)
+    public function getComments(Request $request, string $channelName)
     {
-        return Comment::with('user:id,name,avatar')
-            ->where('commentable_id', $id)
+        if ($request->has('reply')) {
+            $comment = Comment::findOrFail($channelName);
+            return $comment->replies()->with('user:id,name,avatar')
+                ->latest()
+                ->simplePaginate(10);
+        }
+        $channel = Channel::where('name', $channelName)->first();
+        if (!$channel) $channel = Channel::create(['name' => $channelName]);
+
+        return $channel
+            ->comments()
+            ->withCount('replies')
+            ->with('user:id,name,avatar')
             ->latest()
             ->simplePaginate(10);
     }
     public function storeComment(Request $request)
     {
         $user = Auth::user();
-
         $isFile = $request->hasFile('file');
-        $comment = $user->comments()->create([
-            'commentable_id' => $request->commentable_id,
+
+        $data = [
+            'user_id' => $user->id,
             'body' => $isFile ? $this->storeFile($request->file) : $request->body
-        ]);
+        ];
+
+        if ($request->has('reply')) {
+            $comment = Comment::findOrFail($request->channel);
+            return $comment->replies()->create($data);
+        }
+        $channel = Channel::where('name', $request->channel)->firstOrFail();
+
+        $comment = $channel->comments()->create($data);
         return $comment;
     }
     public function updateComment(string $id, array $comment)

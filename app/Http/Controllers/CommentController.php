@@ -30,7 +30,7 @@ class CommentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'commentable_id' => 'required',
+            'channel' => 'required',
             'body' => 'string',
             'file' => 'image'
         ]);
@@ -46,10 +46,10 @@ class CommentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         try {
-            $comments = $this->model->getComments($id);
+            $comments = $this->model->getComments($request, $id);
             return response()->json($comments);
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);

@@ -7,7 +7,7 @@ use Illuminate\Http\UploadedFile;
 
 interface CommentI
 {
-    public function getComments(string $id);
+    public function getComments(Request $request, string $channel);
     public function storeComment(Request $request);
     public function updateComment(string $id, array $comment);
     public function destroyComment(string $id);
